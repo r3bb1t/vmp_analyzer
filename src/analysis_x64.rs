@@ -29,7 +29,7 @@ pub mod analysis {
     ///
     /// mov dword_reg, qword ptr ss:[rsp+0x90]
     ///
-    /// TODO: Improve quality
+    /// TODO: Replace it. Not valid for VMP 3.8
     pub fn is_vip_init(instruction: &DecodedInstruction) -> bool {
         // Byte representation of instruction should look like: 48 8B B4 24 90 00 00 00
         // Third byte (B4) represents the dword register and can be different for various VMs
@@ -45,11 +45,14 @@ pub mod analysis {
     }
 
     pub fn is_vm_exit(instrs: &Vec<DecodedInstruction>) -> bool {
-        let pops = instrs
+
+        let registers_written_from_stack = instrs
             .iter()
-            .filter(|ins| ins.mnemonic == Mnemonic::POP)
+            .filter(|instr| is_real_stack_access(instr) && instr.operands.iter().any(|op| op.ty == OperandType::REGISTER && op.action == OperandAction::WRITE))
             .count();
-        pops > 10
+
+        registers_written_from_stack > 13
+
     }
 
     /// Replace [rsp+reg] with [rsp+imm]
@@ -132,5 +135,14 @@ pub mod analysis {
             }
         }
         None
+    }
+
+    // Checks whether the real stack has been accesed
+    pub fn is_real_stack_access(instruction: &DecodedInstruction) -> bool {
+        instruction.operands.iter().any(|op| {
+            op.ty == OperandType::MEMORY
+                && op.mem.segment == Register::SS
+                && op.mem.base == Register::RSP
+        })
     }
 }

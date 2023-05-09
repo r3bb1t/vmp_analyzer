@@ -16,7 +16,7 @@ pub fn better_print(instruction: &DecodedInstruction, address: Option<u64>) -> S
 
     let formatter = Formatter::new(FormatterStyle::INTEL).unwrap();
     formatter
-        .format_instruction(&instruction, &mut buffer, address, None)
+        .format_instruction(instruction, &mut buffer, address, None)
         .unwrap();
 
     buffer.as_str().unwrap().to_string()

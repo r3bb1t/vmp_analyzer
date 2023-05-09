@@ -51,11 +51,11 @@ pub fn get_segments(file_path: &str) -> error::Result<Vec<SegmentData>>   {
     let mut file_buf: Vec<u8> = vec![0; file_size as usize];
     
 
-    file.read(&mut file_buf)?;
+    file.read_exact(&mut file_buf)?;
 
 
 
-    let pe = PE::parse(& mut file_buf)?;
+    let pe = PE::parse(& file_buf)?;
     for section in pe.sections {
 
         let mut current_section = SegmentData::new();

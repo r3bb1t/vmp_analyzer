@@ -13,7 +13,7 @@ example:
 
 ### How it works
 
-It starts execution from begin_addr, and stops when reaches the until_addr (not actually, there is a bug). While doing that, it also traces the executed instructions and filters them to give you a nice view of important parts of executed code. I'd say it's a good start for people only getting hands on vmprotect for the first time and trying to understand it's internals.
+It starts emulation from begin_addr, and stops when reaches the until_addr (not actually, there is a bug). While doing that, it also traces the executed instructions and filters them to give you a nice view of important parts of executed code. I'd say it's a good start for people only getting hands on vmprotect for the first time and trying to understand it's internals.
 
 Later, I will release a good documentation which will explain how both vmprotect and this project works. Currently it's capable of running somewhat properly functions which are doing things like addition/multiplications/substractions/etc, but no branching. But still can handle (hopefully) calls to other functions from protected functions.
 

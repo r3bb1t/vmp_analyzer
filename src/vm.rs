@@ -1,8 +1,8 @@
 use std::{collections::HashMap};
 use tui::widgets::ListState;
-use zydis::{enums::generated::Register, DecodedInstruction, OperandAction, Mnemonic, OperandType};
+use zydis::{enums::generated::Register, DecodedInstruction, OperandAction, OperandType};
 
-use crate::{disasm, analysis_x64::analysis::is_vip_init};
+use crate::{disasm, analysis_x64::analysis::{is_vip_init, is_real_stack_access}};
 
 /// Before the execution of a vm, 0x180 bytes are being allocated on the stack by
 /// using the following instruction:
@@ -102,7 +102,15 @@ impl VM_STATE_V2 {
         for instruction in &self.instruction_history {
 
 
-            if instruction.mnemonic == Mnemonic::PUSH || instruction.mnemonic == Mnemonic::PUSHFQ { entry_clean_code.push(instruction.clone()); }
+   
+            if instruction
+                .operands
+                .iter()
+                .any(|op| op.action == OperandAction::READ && op.ty == OperandType::REGISTER)
+                && is_real_stack_access(instruction)
+            {
+                entry_clean_code.push(instruction.clone());
+            }
     
             // Finding the VSP
             if instruction.operands.iter().any(|op| op.reg == Register::RSP && op.action == OperandAction::READ) {
@@ -113,7 +121,7 @@ impl VM_STATE_V2 {
             }
     
             // Finding the VIP
-            else if is_vip_init(&instruction) {
+            else if is_vip_init(instruction) {
                 self.vip = instruction.operands[0].reg;
                 entry_clean_code.push(instruction.clone());
             }
@@ -146,17 +154,19 @@ impl VM_STATE_V2 {
     }
 
     // Checks if we encountered the VM_EXIT.
-    // If so, returning the vector of it
+    // If so, returning the vector of it's "cleaned" instructions
     pub fn is_vm_exit(&mut self) -> Option<Vec<DecodedInstruction>> {
 
         let mut output: Vec<DecodedInstruction> = Vec::new();
 
         for instruction in &self.instruction_history {
-            if [Mnemonic::POP, Mnemonic::POPFQ].contains(&instruction.mnemonic) {
-                output.push(instruction.clone());
-            }
 
-            if instruction.operands.iter().any(|op| op.reg == Register::RSP && op.action == OperandAction::WRITE) {
+            if is_real_stack_access(instruction)
+                && instruction
+                    .operands
+                    .iter()
+                    .any(|op| op.action == OperandAction::WRITE && op.ty == OperandType::REGISTER)
+            {
                 output.push(instruction.clone());
             }
         }
@@ -205,7 +215,6 @@ impl VM_STATE_V2 {
 
     
 }
-
 
 
 

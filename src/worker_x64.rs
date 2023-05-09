@@ -31,13 +31,13 @@ fn run(
     until: u64,
     tx: Sender<Vec<DecodedInstruction>>,
 ) -> Result<(), uc_error> {
-    // TODO: Add pretty print of vregisters after each handler + VSTACK
+
 
     // TODO: Start ignoring instructions with the rolling key
 
     let mut vm_state: VM_STATE_V2 = VM_STATE_V2::new();
 
-    let mut push_amount = 0;
+    let mut stack_writes_amount = 0;
 
     let mut stack_operands: Vec<Register> = Vec::new();
 
@@ -60,14 +60,19 @@ fn run(
 
         let mut instruction = disasm::decode_instruction(&code).unwrap();
 
-        // TODO: Consider not counting PUSH'es
+
         vm_state.instruction_history.push(instruction.clone());
-        if instruction.mnemonic == Mnemonic::PUSH {
-            push_amount += 1
+
+
+        if analysis::is_real_stack_access(&instruction) && instruction.operands.iter().any(|op| op.ty == OperandType::REGISTER && op.action == OperandAction::READ) {
+
+            stack_writes_amount += 1;
         }
 
         // If in VM_ENTRY, process it
-        if analysis::is_bb_end(&instruction) && push_amount > 12 {
+        if analysis::is_bb_end(&instruction) && stack_writes_amount > 12 && vm_state.instruction_history.iter().any(|ins| ins.operands.iter().any(|op| op.reg == Register::RSP ) ){
+
+
             must_be = vm_state.parse_old_vm_entry();
 
             let offset = 152;
@@ -144,21 +149,17 @@ fn run(
                     }
                 }
                 OperandAction::WRITE => {
-                    if vm_state.in_vm {
-                        if instruction.operands.iter().any(|op| {
-                            op.action == OperandAction::READ && op.ty == OperandType::REGISTER
-                        }) {
-                            if instruction
-                                .operands
-                                .iter()
-                                .any(|operand| vip_operands.contains(&operand.reg))
-                            {
-                                let new_instr = analysis::unfold_constant(uc, &mut instruction);
-                                let last_element_id = must_be.len() - 1;
-                                must_be[last_element_id] = new_instr;
-                            }
-                        }
+                    if vm_state.in_vm && instruction.operands.iter().any(|op| {
+                        op.action == OperandAction::READ && op.ty == OperandType::REGISTER
+                    }) && instruction
+                        .operands
+                        .iter()
+                        .any(|operand| vip_operands.contains(&operand.reg)) {
+                        let new_instr = analysis::unfold_constant(uc, &mut instruction);
+                        let last_element_id = must_be.len() - 1;
+                        must_be[last_element_id] = new_instr;
                     }
+                                
                 }
                 _ => (),
             }
@@ -240,7 +241,7 @@ fn run(
 
             vip_operands.clear();
 
-            push_amount = 0;
+            stack_writes_amount = 0;
             stack_operands.clear();
             vm_state.instruction_history.clear();
 

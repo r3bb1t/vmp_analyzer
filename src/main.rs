@@ -48,8 +48,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let conf = config::Config {
         file_path: arg1,
-        begin: u64::from_str_radix(&arg2, 16)?,
-        until: u64::from_str_radix(&arg3, 16)?,
+        begin: u64::from_str_radix(arg2, 16)?,
+        until: u64::from_str_radix(arg3, 16)?,
     };
 
     println!("{conf:#x?}");

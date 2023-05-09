@@ -29,7 +29,7 @@ fn get_emulator(
 
     // loading the segments
     for element in data {
-        uc.mem_map(element.start, element.size as usize, Permission::all())?;
+        uc.mem_map(element.start, element.size, Permission::all())?;
         uc.mem_write(element.start, &element.data)?;
     }
 
